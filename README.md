@@ -1,2 +1,2 @@
-# Elevator_control_system
+# VHDL version of Elevator Control System
 Written in VHDL
