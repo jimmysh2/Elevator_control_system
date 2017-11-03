@@ -1,26 +1,3 @@
---CREATED BY:
--- HARSHIT GOEL (2016CS10319)
-
----- BASIC CONCEPT USED : FSM
----------------------------------------------------------------------------------------
----- BRIEF DESCRIPTION OF ALL THE ENTITIES AND SOME IMPORTANT SIGNALS
-----
---   ENTITY 1: REQUEST_HANDLER
---           this component takes requests (from outside the lift) from each floor for going up or down.
---           then it assigns each request to resp. lift acc. to the lift_status and outputs these requests to be displayed on LEDS.
---           (reset is just to start the whole system from a known base state)
---   ENTITY 2&3 : LIFT_CONTROLLERS
---              these take input from user inside the lift and also from request handler (which gives the request of users outside the lift)
---              then the controller processes these requests and determines the behaviour and future(next) status of the lift.
---              the lift_status signal contains information about :
---              1.the floor of the lift & 2.the status of the lift(up, down, idle->(door open/close))
---              (reset is just to start the whole system from a known base state which is floor=0 & door=open)
---   ENTITY 4 : STATUS_DISPLAY_BLOCK
---            this block receives the status of both the lifts and also the requests from users outside the lift(through request_handler)
---            then it simply displays the results on the LEDs and SSD accordingly.  
-
------possible changes:
----  1. Allow to open the door while it is closing
 -----------------------------------------------------------------------------------------
 ----- TOP LEVEL ENTITY
 library ieee;
@@ -65,7 +42,7 @@ use IEEE.STD_LOGIC_1164.all;
 use ieee.std_logic_unsigned.all;
 
 entity clock_set is
-    port(b,clock_in : in std_logic; display_clock,work_clock : out std_logic);
+    port(mode,clock_in : in std_logic; display_clock,work_clock : out std_logic);
 end entity;
 -----
 -------DELAY CREATOR
@@ -82,6 +59,7 @@ end entity;
 ------ ARCHITECTURE of TOP LEVEL ENTITY
 architecture behav of lab8_elevator_control is
 
+----- signal declarations
 signal lift1_status,lift2_status : std_logic_vector(3 downto 0);
 signal up_lift1,down_lift1,up_lift2,down_lift2: std_logic_vector(3 downto 0);
 
@@ -89,44 +67,37 @@ signal to_sdb_from_rh,to_sdb_from_lc1,to_sdb_from_lc2,to_sdb: std_logic_vector(7
 
 signal lift1_req_indicator : std_logic_vector(3 downto 0);
 signal lift2_req_indicator : std_logic_vector(3 downto 0);
-SIGNAL display_clock: std_logic;
-SIGNAL work_clock: std_logic;
-signal lift1_door : std_logic;
-signal lift2_door : std_logic;
+signal display_clock: std_logic;
+signal work_clock: std_logic;
+signal lift1_door,lift2_door : std_logic;
 signal lift1_m,lift2_m : std_logic;
-
+-----
 begin
+	--- to_sdb is the signal(vector) which contains LED outputs for requests from outside the lifts
     to_sdb <= to_sdb_from_rh or to_sdb_from_lc1 or to_sdb_from_lc2 ;
-    --entity request_handler is
-    --port(clk,reset: in std_logic; up_request,down_request: in std_logic_vector(3 downto 0);lift1_status, lift2_status : in std_logic_vector(3 downto 0);
-        -- up_lift1,down_lift1, up_lift2,down_lift2: out std_logic_vector(3 downto 0); to_sdb: out std_logic_vector(7 downto 0));
-    --end entity;
+	
+    --- COMPONENT INSTANTIATIONS
+	
     x1: entity work.request_handler(behav)
         port map(work_clock,reset,up_request,down_request,lift1_status, lift2_status,up_lift1, down_lift1, up_lift2,down_lift2, to_sdb_from_rh);
-    
-    --entity lift_controller is
-    --port (clk, lift_floor , door_open,door_close , up_request_rh,down_request_rh : in std_logic_vector(3 downto 0); reset : in std_logic;
-        --  lift_status : out std_logic_vector(3 downto 0);req_indicator:out std_logic_vector(3 downto 0) ); -- door:out std_logic);
-    --end entity;
+    ---------
     x2: entity work.lift_controller(behav)
         port map(work_clock,lift1_floor , door_open(0) , door_close(0) ,up_lift1,down_lift1, reset , lift1_status , lift1_req_indicator,lift1_door,lift1_m,to_sdb_from_lc1);
     
     x3: entity work.lift_controller(behav)
         port map(work_clock,lift2_floor , door_open(1) , door_close(1) ,up_lift2,down_lift2, reset , lift2_status , lift2_req_indicator,lift2_door,lift2_m,to_sdb_from_lc2);
-    
-    --entity sdb is
-    --port(clk:in std_logic; lift1_status,lift1_req_indicator,lift2_status,lift2_req_indicator : in std_logic_vector(3 downto 0);from_rh: in std_logic_vector(7 downto 0);
-        --led_outputs :out std_logic_vector(15 downto 0); anode: out std_logic_vector(3 downto 0); cathode:out std_logic_vector(6 downto 0));
-    --end entity;
+    ---------
     x4: entity work.sdb(behav)
         port map(display_clock, lift1_status, lift1_req_indicator, lift2_status, lift2_req_indicator ,to_sdb,led_outputs, anode, cathode,lift1_door,lift2_door,lift1_m,lift2_m);
-    x5: entity work.clock_set(behav)
+    ---------
+	x5: entity work.clock_set(behav)
         port map('0',clk,display_clock,work_clock);
 end architecture;
 -----------------------------------------------------------
------------------------------------------------------------
+------ARCHITECTURE of LIFT CONTROLLER
 architecture behav of lift_controller is
 
+----- signal declarations
     signal idle : std_logic:='1';
     signal dir : std_logic:='1';
     signal state : std_logic_vector(2 downto 0):="000";
@@ -135,22 +106,18 @@ architecture behav of lift_controller is
     signal up_request : std_logic_vector(3 downto 0);
     signal down_request : std_logic_vector(3 downto 0);
     ---
-    signal e1 : std_logic:='0';
-    signal e2 : std_logic:='0';
-    signal e3 : std_logic:='0';
-    signal e4 : std_logic:='0';
-    signal d1 : std_logic:='0';
-    signal d2 : std_logic:='0';
-    signal d3 : std_logic:='0';
-    signal d4 : std_logic:='0';
+    signal e1,e2,e3,e4 : std_logic:='0';
+    signal d1,d2,d3,d4 : std_logic:='0';
     signal doreq : std_logic:='0';
     signal dcreq : std_logic:='0';
-    signal m : std_logic:='0';
-    
+    signal m : std_logic:='0'; -- this signal is special and it becomes '1' only when the door is opening or closing else it remains '0'
+-----    
     begin
-        delay_element1: entity work.delay(behav)
+		--- Component instantiation of delay creator
+        delay_element: entity work.delay(behav)
                        port map(clk,e1,e2,e3,e4,d1,d2,d3,d4);
         -------
+		--- to_sdb is the signal(vector) which contains LED outputs for requests assigned to this lift from outside
         to_sdb<=down_request & up_request;
         ------             
         idle<='1' when target="0000" and up_request="0000" and down_request="0000" else '0';
@@ -182,9 +149,9 @@ architecture behav of lift_controller is
                     else
                         if clk='0' and clk'event then
                             case state is
-                                ------ F_0 close
+                                ------ Floor 0, door close
                                 when "001" =>
-                                    --m<='0';
+                                    
                                     dir<='1';
                                     if target(0)='1' or up_request(0)='1' then ------open the door after 0.1 or 0.5 sec depending on door request
                                         m<='1';
@@ -202,7 +169,7 @@ architecture behav of lift_controller is
                                     else if target(3 downto 1)>"000" or up_request(2 downto 1)>"00" or down_request(3 downto 1)>"000" then ---after 2 sec delay change state to 011
                                             e4<='1';
                                             if d4='1' then
-                                                state<="011"; e4<='0'; end if; ---modified for testing and found problem = no delay created!!
+                                                state<="011"; e4<='0'; end if;
                                         
                                          ------------------------
                                          else ---you can play with door open/close
@@ -216,11 +183,11 @@ architecture behav of lift_controller is
                                               end if;
                                          end if;
                                     end if;
-                                    --state<="001"; ---testing purpose
+                                    
                                 ------
-                                ------ F_1 close
+                                ------ Floor 1, door close
                                 when "011" =>
-                                    --m<='0';
+                                    
                                     if idle='1' then dir<='1'; end if;
                                     
                                     if target(1)='1' or up_request(1)='1' or down_request(1)='1' then ------open the door after 0.1 or 0.5 sec
@@ -233,7 +200,7 @@ architecture behav of lift_controller is
                                         else --delay of 0.5 sec
                                             e2<='1';
                                             if d2='1' then
-                                                state<="010"; e2<='0';target(1)<='0'; up_request(1)<='0'; down_request(1)<='0';m<='0'; end if; --tested by modifying
+                                                state<="010"; e2<='0';target(1)<='0'; up_request(1)<='0'; down_request(1)<='0';m<='0'; end if;
                                         end if;
                                     
                                     else
@@ -267,11 +234,11 @@ architecture behav of lift_controller is
                                             end if;
                                         end if;
                                     end if;
-                                    --state<="011"; ---testing purpose
+                                    
                                 --------
-                                ------- F_2 close
+                                ------- Floor 2 , door close
                                 when "101" =>
-                                    --m<='0';
+                                    
                                     if idle='1' then dir<='1'; end if;
                                     
                                     if target(2)='1' or up_request(2)='1' or down_request(2)='1' then ------open the door after 0.1 or 0.5 sec
@@ -319,8 +286,9 @@ architecture behav of lift_controller is
                                         end if;
                                     end if;
                                 -----
-                                ------ F_3 close
+                                ------ Floor 3 , door close
                                 when "111" =>
+								
                                     m<='0';
                                     dir<='0';
                                     if target(3)='1' or down_request(3)='1' then ------open the door after 0.1 or 0.5 sec depending on door request
@@ -353,8 +321,9 @@ architecture behav of lift_controller is
                                         end if;
                                     end if;
                                 -------
-                                ----- F_0 open
+                                ----- Floor 0 , door open
                                 when "000" =>
+								
                                     if target(0)='1' or up_request(0)='1' or down_request(0)='1' then
                                         target(0)<='0'; up_request(0)<='0'; down_request(0)<='0';
                                         
@@ -387,8 +356,9 @@ architecture behav of lift_controller is
                                         end if;
                                     end if;
                                 -----
-                                ----F_1 open
+                                ----Floor 1 , door open
                                 when "010" =>
+								
                                     if target(1)='1' or up_request(1)='1' or down_request(1)='1' then
                                         target(1)<='0'; up_request(1)<='0'; down_request(1)<='0';
                                         
@@ -421,10 +391,11 @@ architecture behav of lift_controller is
                                              end if;
                                         end if;
                                     end if;
-                                    --state<="011";---testing purpose
+                                    
                                 -----
-                                ----F_2 open
+                                ----Floor 2 , door open
                                 when "100" =>
+								
                                     if target(2)='1' or up_request(2)='1' or down_request(2)='1' then
                                         target(2)<='0'; up_request(2)<='0'; down_request(2)<='0';
                                         
@@ -457,8 +428,9 @@ architecture behav of lift_controller is
                                         end if;
                                     end if;
                                 -----
-                                ----F_3 open
+                                ----Floor 3 , door open
                                 when "110" =>
+								
                                     if target(3)='1' or up_request(3)='1' or down_request(3)='1' then
                                         target(3)<='0'; up_request(3)<='0'; down_request(3)<='0';
                                         
@@ -500,18 +472,14 @@ architecture behav of lift_controller is
         end process;
         ---
 end architecture;
-------------------
-----------------DELAY ARCHITECTURE----
+------------------------------------
+------- ARCHITECTURE of DELAY CREATOR
 architecture behav of delay is
 signal c1,c2,c3,c4 : std_logic_vector(8 downto 0):="000000000";
 begin
     process(clk)
     begin
         if clk='1' and clk'event then
-            --if e='1' then
-              --  counter <= counter +1 ;
-            --else counter<="00000000";
-            --end if;
             
             if e1='1' then c1<=c1+1;
             else c1<="000000000"; end if;
@@ -524,20 +492,21 @@ begin
             
             if e4='1' then c4<=c4+1;
             else c4<="000000000"; end if;
+			
         end if;
     end process;
     
-    --d<='1' when counter(7)='1' else '0';
-    d1<='1' when c1(4)='1' else '0';
-    d2<='1' when c2(6)='1' else '0';
-    d3<='1' when c3(7)='1' else '0';
-    d4<='1' when c4(8)='1' else '0';
+    d1<='1' when c1(4)='1' else '0'; -- d1 represents delay of 0.1 sec (approx.)
+    d2<='1' when c2(6)='1' else '0'; -- d2 represents delay of 0.5 sec (approx.)
+    d3<='1' when c3(7)='1' else '0'; -- d3 represents delay of 1 sec (approx.)
+    d4<='1' when c4(8)='1' else '0'; -- d4 represents delay of 2 sec (approx.)
 
 end architecture;
--------------
-----------------------
+----------------------------------------
+-------- ARCHITECTURE of REQUEST HANDLER
 architecture behav of request_handler is
 
+----- signal declarations
 signal up_req : std_logic_vector(3 downto 0);
 signal down_req : std_logic_vector(3 downto 0);
 signal idle1 : std_logic;
@@ -547,7 +516,7 @@ signal lift1_floor : integer:=0;
 signal lift2_floor : integer:=0;
 signal lift1_mov : std_logic:='0';
 signal lift2_mov : std_logic:='0';
-
+------
 begin
     to_sdb<=down_req & up_req;
     upreq_lift1<=up_lift1;
@@ -560,7 +529,7 @@ begin
     idle2<='1' when lift2_status(1 downto 0) ="00" or lift2_status(1 downto 0) ="11" else '0';
     lift1_mov<='0' when lift1_status(1 downto 0)= "01" else '1';
     lift2_mov<='0' when lift2_status(1 downto 0)= "01" else '1';
-    
+    -------
     with lift1_status(3 downto 2) select lift1_floor <=
                                                         3 when "11",
                                                         2 when "10",
@@ -571,7 +540,7 @@ begin
                                                         2 when "10",
                                                         1 when "01",
                                                         0 when others;                                    
-
+	--------
     process(clk,up_request,down_request,reset)
     begin
         if reset='1' then
@@ -743,13 +712,14 @@ begin
         end if;
     end process;
 end architecture;
--------
-
+----------------------------
+------- ARCHITECTURE of STATUS DISPLAY BLOCK
 architecture behav of sdb is
 
 begin
+	---- led_outputs is the final output to be displayed on the onboard LEDs
     led_outputs <= lift1_req_indicator & lift2_req_indicator & from_rh;
-    
+    ----
     process(clock)
         type status is ('u','d','o','c','0','1','2','3');
         variable digits : status:='o';
@@ -831,7 +801,8 @@ begin
             end if;
         end process;
 end architecture;
----
+--------------------------
+------- ARCHITECTURE of CLOCK SETTER
 architecture behav of clock_set is
         signal counter : std_logic_vector(19 downto 0):=(others=>'0');
         begin
@@ -842,8 +813,8 @@ architecture behav of clock_set is
             end if;
         end process;
         
-        display_clock <= counter(17) when b='0' else clock_in;    
-        work_clock <= counter(19) when b='0' else counter(1);
+        display_clock <= counter(17) when mode='0' else clock_in;    
+        work_clock <= counter(19) when mode='0' else counter(1);
 end architecture;
 ----------------------
-------------------------------END OF ELEVATOR CONTROL (LAB 8) -------------
+------------------------------END OF ELEVATOR CONTROL SYSTEM -------------
