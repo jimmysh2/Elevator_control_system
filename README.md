@@ -1,4 +1,4 @@
-# VHDL version of Elevator Control System
+# Elevator Control System
 Written in VHDL
 
 CREATED BY:
@@ -14,11 +14,11 @@ Indian Institute Of Technology Delhi
              Then it assigns each request to resp. lift acc. to the lift_status and outputs these requests to be displayed on LEDS.
              
 -->ENTITY 2 : LIFT_CONTROLLER (this is same for both the lifts)
-                This takes input from user inside the lift and also from request handler (which gives the request of users outside the lift)
-                Then the controller processes these requests and determines the behaviour and future(next) status of the lift.
-                The lift_status signal contains information about :
-                1. The floor of the lift
-				2. The status of the lift(up, down, idle->(door open/close))
+              This takes input from user inside the lift and also from request handler (which gives the request of users outside the lift)
+              Then the controller processes these requests and determines the behaviour and future(next) status of the lift.
+              The lift_status signal contains information about :
+              1. The floor of the lift
+	      2. The status of the lift(up, down, idle->(door open/close))
               
 -->ENTITY 3 : STATUS_DISPLAY_BLOCK
               This block receives the status of both the lifts and also the requests from users outside the lift(through request_handler)
@@ -26,10 +26,10 @@ Indian Institute Of Technology Delhi
 			  The 4 digit SSD Display is as follows:
 			  Lift1 Status , Lift1 Floor , Lift2 Status , Lift2 Floor
 			  Status:
-					 u (if lift is moving up)
-					 d (if lift is moving down)
-					 o (if door of the lift is open)
-					 c (if door of the lift is closed(or has started closing) and lift is not moving)
+				 u (if lift is moving up)
+				 d (if lift is moving down)
+				 o (if door of the lift is open)
+				 c (if door of the lift is closed(or has started closing) and lift is not moving)
 			  Floor: 0,1,2,3 (where 0 represents the ground floor)
 
 -->ENTITY 4 : CLOCK_SETTER
@@ -54,12 +54,13 @@ Indian Institute Of Technology Delhi
 3. Open hardware manager and program the device (make sure that the device is connected)
 4. Now the device should be ready! :)
 
-NOTE : 1. For this project, the slide switches on the board have to be used like push buttons.
-	   2. If you have any problem in generating the bitstream then use the *.bit file included in the repo to program the device.
-	   3. For running simulation in vivado, make sure to change the value of 'mode' from '0'(default) to '1' inside the architecture of TOP_LEVEL_ENTITY.
+NOTE : 
+1. For this project, the slide switches on the board have to be used like push buttons.
+2. If you have any problem in generating the bitstream then use the *.bit file included in the repo to program the device.
+3. For running simulation in vivado, make sure to change the value of 'mode' from '0'(default) to '1' inside the architecture of TOP_LEVEL_ENTITY.
 
-#Possible modifications:
-	1. Allow to open the door while it is closing
-	2. Can be optimised further by changing the priority of request handler from lift1 to the lift which is closest to the requesting floor.
+# Possible modifications:
+1. Allow to open the door while it is closing
+2. Can be optimised further by changing the priority of request handler from lift1 to the lift which is closest to the requesting floor.
 
 THANK YOU :)
