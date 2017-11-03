@@ -3,6 +3,7 @@ Written in VHDL
 
 CREATED BY:
 HARSHIT GOEL
+
 Indian Institute Of Technology Delhi
 
 # BASIC CONCEPT USED : Finite State Machine (FSM) 
@@ -46,6 +47,7 @@ Indian Institute Of Technology Delhi
 				c) 1 sec to keep the door open at one destination floor and close after that to go to another floor.
  
 ('reset' is just to start the whole system from a known base state which is floor=0 & door=open)
+
 -----------------------------------------------------------------------------
 # How to run on board ?
 1. Open Vivado and make a new project.
