@@ -70,5 +70,3 @@ NOTE :
 # Possible modifications:
 1. Allow to open the door while it is closing
 2. Can be optimised further by changing the priority of request handler from lift1 to the lift which is closest to the requesting floor.
-
-THANK YOU :)
